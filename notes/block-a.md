@@ -1,10 +1,10 @@
 **Topic 1: What is a token?**
 
-This is the foundation. Before you write a single line of agent code, you need to understand how LLMs actually "see" text.
+This is the foundation. Before you write a single line of agent code, you need to understand how LLMs (Large Language Model) actually "see" text.
 
 ## The core idea
 
-An LLM doesn't read words or letters — it reads _tokens_. A token is roughly a chunk of text. Sometimes it's a whole word, sometimes part of a word, sometimes punctuation.
+An LLM (Large Language Model) doesn't read words or letters — it reads _tokens_. A token is roughly a chunk of text. Sometimes it's a whole word, sometimes part of a word, sometimes punctuation.
 
 ```
 "Hello world"  →  ["Hello", " world"]         = 2 tokens
