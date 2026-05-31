@@ -111,3 +111,130 @@ Add to `notes/block-a.md`:
 That's Topic 2 — directly connected to Topic 1. You now understand why token count is something you actively manage in agent code, not just a billing detail.
 
 Say **next** for Topic 3 — system prompt vs user message vs assistant message. This is where you write your first actual code snippet.
+
+# Topic 3: System prompt vs user message vs assistant message
+
+## The core idea
+
+Every conversation with an LLM is just an array of messages. Each message has a **role** and **content**. There are exactly 3 roles:
+
+```js
+const messages = [
+  { role: "system", content: "You are a helpful assistant..." },
+  { role: "user", content: "What is a token?" },
+  { role: "assistant", content: "A token is a chunk of text..." },
+  { role: "user", content: "Give me an example" },
+];
+```
+
+That array is literally everything you send to the API. No magic — just a list of turns.
+
+## What each role does
+
+**`system`** — Your instructions to the model. Runs before everything. This is where you define the agent's personality, rules, and task. Only one per conversation, always first.
+
+```js
+{ role: "system", content: `
+  You are an AI research assistant.
+  Always search before answering questions about current events.
+  Keep responses under 200 words.
+  The user is a JS developer learning agentic AI.
+` }
+```
+
+**`user`** — What the human sends. Can also be tool results (you'll see this in Block C).
+
+**`assistant`** — What the model replied. When you build an agent loop, you save every model response back into this array so the model remembers what it said.
+
+## This is why the model has no memory
+
+The model doesn't store anything between API calls. Every single call you make, you pass the full array again from scratch:
+
+```js
+// Call 1
+const messages = [
+  { role: "system", content: "You are a helpful agent" },
+  { role: "user", content: "My name is Arjun" },
+];
+const reply1 = await callAPI(messages);
+
+// Call 2 — you MUST include previous turns
+messages.push({ role: "assistant", content: reply1 });
+messages.push({ role: "user", content: "What is my name?" });
+const reply2 = await callAPI(messages);
+// reply2: "Your name is Arjun" ✅
+
+// If you forgot to include history:
+const badMessages = [
+  { role: "system", content: "You are a helpful agent" },
+  { role: "user", content: "What is my name?" },
+];
+const reply3 = await callAPI(badMessages);
+// reply3: "I don't know your name" ❌
+```
+
+## Your first real code — try this now
+
+Create `project/topic3.ts` and actually run this:
+
+```ts
+import Anthropic from "@anthropic-ai/sdk";
+
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+const messages: any[] = [
+  {
+    role: "system",
+    content: `You are a helpful assistant teaching agentic AI.
+              The user is a JS developer. Keep answers short.`,
+  },
+];
+
+async function chat(userMessage: string) {
+  messages.push({ role: "user", content: userMessage });
+
+  const response = await client.messages.create({
+    model: "claude-sonnet-4-20250514",
+    max_tokens: 1024,
+    system: messages[0].content,
+    messages: messages.slice(1), // anthropic SDK takes system separately
+  });
+
+  const reply =
+    response.content[0].type === "text" ? response.content[0].text : "";
+
+  messages.push({ role: "assistant", content: reply });
+  console.log("Claude:", reply);
+  console.log("Total messages in history:", messages.length);
+}
+
+await chat("My name is Arjun and I am learning agentic AI");
+await chat("What is my name and what am I learning?"); // tests memory
+```
+
+Run it with:
+
+```bash
+npx ts-node project/topic3.ts
+```
+
+The second question should correctly answer both — proving the history array is working. That's memory, manually implemented.
+
+## Note it down
+
+Add to `notes/block-a.md`:
+
+```md
+## Topic 3: System / User / Assistant messages
+
+- Every API call is just an array of {role, content} objects.
+- system = instructions (first, survives longest in context).
+- user = human input or tool results.
+- assistant = model's replies — you save these back into the array.
+- Model has ZERO memory — you pass full history every call.
+- Memory = just growing the messages array and re-sending it.
+```
+
+---
+
+This is the single most important concept in all of agentic AI. Every agent you ever build, no matter how complex, is just this messages array being managed cleverly.
