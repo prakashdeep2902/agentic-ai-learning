@@ -44,6 +44,70 @@ Note this in `notes/block-a.md`:
 
 ---
 
-That's Topic 1 — genuinely 10 minutes of reading + 5 minutes playing with the tokenizer. No code yet.
+# Topic 2: Context Window
 
-Say "next" when ready for Topic 2 (context window) — it builds directly on this.
+## The core idea
+
+Remember tokens? The context window is just the **maximum number of tokens the model can "see" at once** — both your input AND its output combined.
+
+Think of it like the model's working memory. Whatever fits in the window = it knows. Whatever falls outside = it has no idea it exists.
+
+```
+┌─────────────────────────────────────────┐
+│           Context Window                │
+│                                         │
+│  System prompt       ~500 tokens        │
+│  Conversation so far ~3,000 tokens      │
+│  Tool definitions    ~800 tokens        │
+│  Tool results        ~1,200 tokens      │
+│  ─────────────────────────────────      │
+│  Total used:         ~5,500 tokens      │
+│  Claude's limit:     200,000 tokens     │
+│  Remaining:          ~194,500 tokens    │
+└─────────────────────────────────────────┘
+```
+
+Claude 3.5 Sonnet = 200k token context. That sounds huge — and for a chatbot it is. For agents, it fills up faster than you think.
+
+## Why agents specifically struggle with this
+
+A normal chatbot: user sends 1 message, model replies. Done.
+
+An agent loop looks like this:
+
+```
+Turn 1: user message + system prompt
+Turn 2: + model's reasoning
+Turn 3: + tool call + tool result
+Turn 4: + model's reasoning again
+Turn 5: + another tool call + another tool result
+Turn 6: + final answer
+```
+
+Every turn, you pass the **entire history** again (because the model has no memory — more on that in Topic 4). So the context window grows with every loop iteration. A 20-step agent on a complex task can burn through tokens fast.
+
+## The two things that will bite you
+
+**1. Large tool outputs** — if your search tool returns a full webpage, that's thousands of tokens added every call. You'll learn to truncate tool results.
+
+**2. Forgetting** — if you do exceed the limit and don't handle it, the model just starts ignoring the oldest messages. Your agent can forget what the original task even was.
+
+## Note it down
+
+Add to `notes/block-a.md`:
+
+```md
+## Topic 2: Context Window
+
+- Max tokens the model can see at once (input + output combined).
+- Claude 3.5 Sonnet = 200k tokens.
+- Agents fill it faster than chatbots because history grows every loop turn.
+- Two dangers: large tool outputs, and forgetting old context.
+- Fix: truncate tool results, summarise old history if needed.
+```
+
+---
+
+That's Topic 2 — directly connected to Topic 1. You now understand why token count is something you actively manage in agent code, not just a billing detail.
+
+Say **next** for Topic 3 — system prompt vs user message vs assistant message. This is where you write your first actual code snippet.
