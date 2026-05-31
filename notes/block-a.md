@@ -236,5 +236,3 @@ Add to `notes/block-a.md`:
 ```
 
 ---
-
-This is the single most important concept in all of agentic AI. Every agent you ever build, no matter how complex, is just this messages array being managed cleverly.
