@@ -236,3 +236,108 @@ Add to `notes/block-a.md`:
 ```
 
 ---
+
+# Topic 4: Temperature and top-p
+
+## The core idea
+
+When the model generates a response, it doesn't just pick the single "best" word every time. It picks from a probability distribution — and temperature controls how random that pick is.
+
+Think of it like this:
+
+```
+Next word after "The sky is..."
+
+"blue"      → 60% probability
+"clear"     → 20% probability
+"beautiful" → 10% probability
+"purple"    → 5%  probability
+"delicious" → 1%  probability
+```
+
+**Temperature 0** → always picks the highest probability word ("blue"). Predictable, consistent, boring.
+
+**Temperature 1** → picks based on the actual distribution. Sometimes "clear", occasionally "beautiful".
+
+**Temperature 2** → makes low-probability words more likely. "purple", "delicious" start showing up. Creative but unreliable.
+
+---
+
+## The practical range
+
+```
+0.0  ──────────────────────────────  2.0
+ │                                    │
+ │  Agents, tool calling,          Creative
+ │  data extraction,               writing,
+ │  structured output              brainstorming
+ │
+ └─ Use 0–0.3 for agents
+```
+
+For agents specifically you almost always want low temperature — you need the model to reliably call the right tool, return valid JSON, follow instructions exactly. A creative agent is a broken agent.
+
+---
+
+## What is top-p?
+
+Top-p is a second way to control randomness. Instead of scaling all probabilities, it cuts off the "long tail" of unlikely words.
+
+```
+top-p = 0.9 means:
+Only consider words that together make up 90% of probability mass.
+Ignore everything else, no matter how creative.
+```
+
+In practice — **just set temperature and leave top-p at default (1.0)**. You rarely need to touch both. Most developers only ever touch temperature.
+
+---
+
+## Add it to your code
+
+Open your `topic3.js` / chat file and add `generationConfig`:
+
+```js
+const model = genAI.getGenerativeModel({
+  model: "gemini-1.5-flash",
+  generationConfig: {
+    temperature: 0.3, // low = consistent, good for agents
+    maxOutputTokens: 1024,
+  },
+});
+```
+
+---
+
+## Try this experiment
+
+Run your chat with temperature 0 and ask the same question 3 times:
+
+```
+"Give me one word to describe the sky"
+"Give me one word to describe the sky"
+"Give me one word to describe the sky"
+```
+
+Then change to temperature 1.5 and ask the same question 3 times. You'll see the difference immediately.
+
+---
+
+## Note it down
+
+Add to `notes/block-a.md`:
+
+```md
+## Topic 4: Temperature and top-p
+
+- Temperature controls randomness in output (0 = deterministic, 2 = chaotic).
+- For agents: always use 0–0.3. Need reliability not creativity.
+- top-p = cuts off unlikely words. Rarely need to touch it.
+- Rule of thumb: set temperature low, leave everything else default.
+```
+
+---
+
+Short topic intentionally — this is a dial you set once and forget for agent work.
+
+Say **next** for Topic 5 — prompt engineering basics. Last topic in Block A, then we move to Block B which is where agents actually start taking shape.

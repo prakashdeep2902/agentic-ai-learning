@@ -3,7 +3,13 @@ import readline from "readline";
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-const model = genAI.getGenerativeModel({ model: "gemini-3.5-flash" });
+const model = genAI.getGenerativeModel({
+  model: "gemini-3.1-flash",
+  generationConfig: {
+    temperature: 0.3,
+    maxOutputTokens: 1024,
+  },
+});
 
 const history = [];
 
@@ -27,12 +33,9 @@ while (true) {
 
 async function chat(userMessage) {
   history.push({ role: "user", parts: [{ text: userMessage }] });
-
   const chat = model.startChat({ history: history.slice(0, -1) });
   const result = await chat.sendMessage(userMessage);
   const reply = result.response.text();
-
   history.push({ role: "model", parts: [{ text: reply }] });
-
   console.log("Gemini:", reply);
 }
