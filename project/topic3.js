@@ -1,45 +1,3 @@
-// import "dotenv/config";
-// import readline from "readline";
-// import { GoogleGenerativeAI } from "@google/generative-ai";
-
-// const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
-// const model = genAI.getGenerativeModel({
-//   model: "gemini-3.1-flash",
-//   generationConfig: {
-//     temperature: 0.3,
-//     maxOutputTokens: 1024,
-//   },
-// });
-
-// const history = [];
-
-// const rl = readline.createInterface({
-//   input: process.stdin,
-//   output: process.stdout,
-// });
-
-// const askQuestion = (query) =>
-//   new Promise((resolve) => rl.question(query, resolve));
-
-// while (true) {
-//   const question = await askQuestion("ask any thing with gemnai: ");
-//   if (question == "exit") {
-//     rl.close();
-//     break;
-//   }
-
-//   await chat(question);
-// }
-
-// async function chat(userMessage) {
-//   history.push({ role: "user", parts: [{ text: userMessage }] });
-//   const chat = model.startChat({ history: history.slice(0, -1) });
-//   const result = await chat.sendMessage(userMessage);
-//   const reply = result.response.text();
-//   history.push({ role: "model", parts: [{ text: reply }] });
-//   console.log("Gemini:", reply);
-// }
-
 import "dotenv/config";
 import readline from "readline";
 import Groq from "groq-sdk";
@@ -55,13 +13,41 @@ const messages = [
   },
 ];
 
-async function chat(userMessage) {
-  // add user message to history
-  messages.push({ role: "user", content: userMessage });
+function get_weather(city) {
+  const fakeData = {
+    Hyderabad: { temp: 38, condition: "Sunny" },
+    Mumbai: { temp: 32, condition: "Humid" },
+    Delhi: { temp: 41, condition: "Hot" },
+  };
+  return fakeData[city] ?? { temp: "unknown", condition: "unknown" };
+}
 
+const tools = [
+  {
+    type: "function",
+    function: {
+      name: "get_weather",
+      description: "Get current weather for a city",
+      parameters: {
+        type: "object",
+        properties: {
+          city: {
+            type: "string",
+            description: "The city name, e.g. Hyderabad",
+          },
+        },
+        required: ["city"],
+      },
+    },
+  },
+];
+
+async function chat(userMessage) {
+  messages.push({ role: "user", content: userMessage });
   const response = await client.chat.completions.create({
     model: "llama-3.3-70b-versatile", // free, very capable model
     messages: messages,
+    tool_choice: "auto",
     temperature: 0.3,
     max_tokens: 1024,
   });
@@ -70,7 +56,6 @@ async function chat(userMessage) {
 
   // save reply back to history
   messages.push({ role: "assistant", content: reply });
-
   console.log("\nGroq:", reply);
   console.log("Messages in history:", messages.length);
   console.log("---");

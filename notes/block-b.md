@@ -44,7 +44,6 @@ function get_weather(city) {
   return fakeData[city] ?? { temp: "unknown", condition: "unknown" };
 }
 
-// Step 2: Describe the tool to the AI (JSON Schema format)
 const tools = [
   {
     type: "function",
@@ -65,7 +64,6 @@ const tools = [
   },
 ];
 
-// Step 3: Send user message + tools to the AI
 const messages = [
   { role: "user", content: "What's the weather like in Hyderabad?" },
 ];
@@ -73,13 +71,12 @@ const messages = [
 const firstResponse = await client.chat.completions.create({
   model: "llama-3.3-70b-versatile",
   messages,
-  tools, // <-- AI now knows this tool exists
-  tool_choice: "auto", // AI decides when to use it
+  tools,
+  tool_choice: "auto",
 });
 
 const aiMessage = firstResponse.choices[0].message;
 
-// Step 4: Check if the AI wants to call a tool
 if (aiMessage.tool_calls) {
   const toolCall = aiMessage.tool_calls[0];
   const args = JSON.parse(toolCall.function.arguments);
@@ -87,19 +84,17 @@ if (aiMessage.tool_calls) {
   console.log("AI wants to call:", toolCall.function.name);
   console.log("With args:", args);
 
-  // Step 5: YOU run the actual function
   const result = get_weather(args.city);
 
-  // Step 6: Send the result back so AI can form the final answer
   const secondResponse = await client.chat.completions.create({
     model: "llama-3.3-70b-versatile",
     messages: [
       ...messages,
-      aiMessage, // the AI's tool-call request
+      aiMessage,
       {
         role: "tool",
         tool_call_id: toolCall.id,
-        content: JSON.stringify(result), // your function's result
+        content: JSON.stringify(result),
       },
     ],
     tools,
@@ -107,7 +102,6 @@ if (aiMessage.tool_calls) {
 
   console.log("Final answer:", secondResponse.choices[0].message.content);
 } else {
-  // AI answered directly without needing a tool
   console.log("Direct answer:", aiMessage.content);
 }
 ```
