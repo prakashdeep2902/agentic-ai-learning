@@ -2,16 +2,21 @@ import "dotenv/config";
 import readline from "readline";
 import Groq from "groq-sdk";
 
-const client = new Groq({ apiKey: process.env.GROQ_API_KEY });
+const rl = readline.createInterface({
+  input: process.stdin,
+  output: process.stdout,
+});
+
+const askQuestion = (query) =>
+  new Promise((resolve) => rl.question(query, resolve));
 
 const messages = [
   {
     role: "system",
-    content: `I am your helpfull agent.`,
+    content: `I am your assistant`,
   },
 ];
 
-// Actual tool implementation
 function get_weather(city) {
   const fakeData = {
     Hyderabad: { temp: 38, condition: "Sunny" },
@@ -32,7 +37,7 @@ const tools = [
     type: "function",
     function: {
       name: "get_weather",
-      description: "Get current weather for a city",
+      description: "get the temperture of city",
       parameters: {
         type: "object",
         properties: {
@@ -47,14 +52,14 @@ const tools = [
   },
 ];
 
-async function chat(userMessage) {
+async function AgentCallFn(userMessage) {
   messages.push({
     role: "user",
     content: userMessage,
   });
 
-  // First LLM call
-  const response = await client.chat.completions.create({
+  const client = new Groq({ apiKey: process.env.GROQ_API_KEY });
+  const LLMres = await client.chat.completions.create({
     model: "llama-3.3-70b-versatile",
     messages,
     tools,
@@ -62,19 +67,21 @@ async function chat(userMessage) {
     temperature: 0.3,
   });
 
-  const assistantMessage = response.choices[0].message;
+  const answer = LLMres.choices[0].message;
 
-  if (assistantMessage.tool_calls?.length) {
-    const toolCall = assistantMessage.tool_calls[0];
-    const toolName = toolCall.function.name;
-    const args = JSON.parse(toolCall.function.arguments);
+  console.log("\nAssistant Raw:");
+  console.log(JSON.stringify(answer, null, 2));
+
+  if (answer.tool_calls?.length) {
+    const toolCall = answer.tool_calls[0];
+    const functionName = toolCall.function.name;
+    const arg = JSON.parse(toolCall.function.arguments);
     let result;
-
-    if (toolName === "get_weather") {
-      result = get_weather(args.city);
+    if (functionName == "get_weather") {
+      result = get_weather(arg.city);
     }
 
-    messages.push(assistantMessage);
+    messages.push(answer);
     messages.push({
       role: "tool",
       tool_call_id: toolCall.id,
@@ -96,34 +103,23 @@ async function chat(userMessage) {
     console.log("\nAssistant:");
     console.log(finalAnswer);
   } else {
-    const answer = assistantMessage.content;
+    const finalAnswer = answer.content;
     messages.push({
       role: "assistant",
       content: answer,
     });
-
     console.log("\nAssistant: \n");
-    console.log(answer);
+    console.log(finalAnswer);
   }
 }
 
-const rl = readline.createInterface({
-  input: process.stdin,
-  output: process.stdout,
-});
-
-const askQuestion = (query) =>
-  new Promise((resolve) => rl.question(query, resolve));
-
-console.log('Weather Agent Started. Type "exit" to quit.');
-
 while (true) {
-  const question = await askQuestion("You: ");
-  console.log(question);
+  const question = await askQuestion("User: ");
   if (question === "exit") {
     rl.close();
     break;
   }
-
-  await chat(question);
+  await AgentCallFn(question);
 }
+
+console.log("Bye ! 👋");
